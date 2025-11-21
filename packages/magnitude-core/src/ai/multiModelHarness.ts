@@ -67,6 +67,10 @@ export class MultiModelHarness {
         return await this.roles['query'].query(context, query, schema);
     }
 
+    async ground<T>(screenshot: Image, actions: Action[], actionVocabulary: ActionDefinition<T>[]): Promise<Action[]> {
+        return await this.roles['ground'].ground(screenshot, actions, actionVocabulary);
+    }
+
     get numUniqueModels() {
         return this.uniqueModels.length;
     }

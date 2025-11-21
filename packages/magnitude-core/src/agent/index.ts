@@ -18,6 +18,7 @@ import { isClaude } from '@/ai/util';
 import { retryOnError } from '@/common';
 import { renderContentParts } from '@/memory/rendering';
 import { MultiModelHarness } from '@/ai/multiModelHarness';
+import { BrowserConnector } from '@/connectors/browserConnector';
 
 
 export interface AgentOptions {
@@ -171,8 +172,10 @@ export class Agent {
         const actionDefinition = this.actions.find(def => def.name === action.variant);
 
         if (!actionDefinition) {
-            // It's possible the action name was from a connector that is no longer active,
-            // or the action space was not correctly aggregated.
+            // throw new AgentError(`Undefined action type '${action.variant}'. Ensure agent is configured with appropriate action definitions from connectors.`);
+            if (action.variant === undefined) {
+                 throw new AgentError(`Undefined action type 'undefined'. This usually means the grounding step failed to produce a valid action structure. Ensure the grounding model is returning actions with a 'variant' property matching the available actions.`);
+            }
             throw new AgentError(`Undefined action type '${action.variant}'. Ensure agent is configured with appropriate action definitions from connectors.`);
         }
         return actionDefinition;
@@ -381,6 +384,42 @@ export class Agent {
                 throw new AgentError(
                     `Error planning actions: ${(error as Error).message}`, { variant: 'misalignment' }
                 )
+            }
+            
+            // Ground actions if necessary
+            // We assume that if we have a browser connector, we might want to ground mouse/scroll actions
+            const browserConnector = this.getConnector(BrowserConnector);
+            if (browserConnector) {
+                const screenshot = await browserConnector.getLastScreenshot();
+                
+                // Filter actions that need grounding (mouse interactions)
+                // Check against the list of actions we know are spatial
+                const spatialPrefixes = ['mouse:'];
+                const actionsToGround = actions.filter(a => spatialPrefixes.some(prefix => a.variant.startsWith(prefix)));
+
+                if (actionsToGround.length > 0) {
+                    // Define vocabulary for grounding (only mouse actions)
+                    const groundingVocabulary = this.actions.filter(a => spatialPrefixes.some(prefix => a.name.startsWith(prefix)));
+
+                    try {
+                        // Ground the subset of actions
+                        const groundedSubset = await this.models.ground(screenshot, actionsToGround, groundingVocabulary);
+
+                        // Merge back
+                        let groundedIndex = 0;
+                        actions = actions.map(a => {
+                            if (spatialPrefixes.some(prefix => a.variant.startsWith(prefix))) {
+                                const grounded = groundedSubset[groundedIndex];
+                                groundedIndex++;
+                                return grounded || a; // Fallback to original if missing/dropped
+                            }
+                            return a;
+                        });
+                    } catch (groundingError) {
+                        logger.warn(`Grounding failed: ${groundingError instanceof Error ? groundingError.message : String(groundingError)}. Proceeding with ungrounded actions.`);
+                        // Proceed with original actions if grounding fails
+                    }
+                }
             }
 
             logger.info({ reasoning, actions }, `Partial recipe created`);

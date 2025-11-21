@@ -264,6 +264,28 @@ export class ModelHarness {
             return resp.data;
         }
     }
+    
+    async ground<T>(screenshot: Image, actions: Action[], actionVocabulary: ActionDefinition<T>[]): Promise<Action[]> {
+        const tb = new TypeBuilder();
+        
+        // Use the same dynamic construction for the list of grounded actions
+        // We want BAML to return an object with an 'actions' property which is a list of concrete actions
+        // This mirrors PartialRecipe but just for the actions part.
+        // Actually, we should just construct 'GroundedActionList' to have a property 'actions' which is the list.
+        tb.GroundedActionList.addProperty('actions', tb.list(convertActionDefinitionsToBaml(tb, actionVocabulary)));
+        
+        const jsonActions = JSON.stringify(actions, null, 2);
+        
+         const response = await this.baml.GroundActions(
+            await screenshot.toBaml(),
+            jsonActions,
+            { tb }
+        );
+        this._reportUsage();
+        
+        // Return the strictly typed actions from the dynamic response
+        return response.actions as Action[];
+    }
 
     // async classifyCheckFailure(screenshot: Image, check: string, existingRecipe: Action[], tabState: TabState): Promise<BugDetectedFailure | MisalignmentFailure> {
     //     const stringifiedExistingRecipe = [];

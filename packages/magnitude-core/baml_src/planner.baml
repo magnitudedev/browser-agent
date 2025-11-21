@@ -175,3 +175,30 @@ function QueryMemory(memory: AgentContext, query: string, includeClaudeSpoof: bo
 //         {{ DescribeBrowserExecutionContext(context) }}
 //     "# 
 // }
+
+class GroundedActionList {
+    @@dynamic
+}
+
+function GroundActions(screenshot: image, actions: string) -> GroundedActionList {
+    client GeminiPro
+    prompt #"
+        {{ _.role("system") }}
+        You are a helpful assistant that grounds actions to a screenshot.
+        
+        You will receive a list of actions that need to be executed. Some of these actions may be missing specific coordinates (e.g. they may have generic coordinates like 0,0) but describe what they intend to click/scroll.
+        
+        Your job is to:
+        1. Analyze the screenshot to find the correct elements.
+        2. Update the actions with the precise x,y coordinates based on the screenshot.
+        3. Return the list of grounded actions.
+        
+        {{ ctx.output_format }}
+        
+        {{ _.role("user") }}
+        {{ screenshot }}
+        
+        Actions to ground:
+        {{ actions }}
+    "#
+}
