@@ -18,18 +18,17 @@ import { Image } from "@/memory/image";
 
 // }
 
-// Changed back to 3 - too many situations where the amnesia of having only 1 is very problematic and makes agent act stupidly
-// With caching, using 3 is relatively ok tradeoff
-// Maybe try 2 for now, or could do 3 when prompt caching available else 2
-const DEFAULT_MIN_RETAINED_SCREENSHOTS = 2;
+// With batch-drop caching strategy (accumulate to max, drop to min)
+// Optimal cycle is ~10 turns between cache invalidations
+const DEFAULT_MIN_SCREENSHOTS = 3;
+const DEFAULT_MAX_SCREENSHOTS = 12;
 
 export interface BrowserConnectorOptions {
-    //browser?: Browser
     browser?: BrowserOptions
     url?: string
-    //browserContextOptions?: BrowserContextOptions
     virtualScreenDimensions?: { width: number, height: number },
-    minScreenshots?: number,
+    minScreenshots?: number, // keep this many after batch drop
+    maxScreenshots?: number, // trigger batch drop when exceeding this
     visuals?: ActionVisualizerOptions
 }
 
@@ -154,9 +153,7 @@ export class BrowserConnector implements AgentConnector {
             tabInfo += `${index === currentTabs.activeTab ? '[ACTIVE] ' : ''}${tab.title} (${tab.url})`;
         });
 
-        //console.log("this.options.screenshotMemoryLimit", this.options.screenshotMemoryLimit);
-        const screenshotLimit = this.options.minScreenshots ?? DEFAULT_MIN_RETAINED_SCREENSHOTS;
-        //console.log("screenshotLimit:", screenshotLimit);
+        const screenshotLimit = this.options.minScreenshots ?? DEFAULT_MIN_SCREENSHOTS;
 
         observations.push(
             Observation.fromConnector(

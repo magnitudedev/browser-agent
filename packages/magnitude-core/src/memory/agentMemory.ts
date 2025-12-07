@@ -1,13 +1,8 @@
-import { 
-    MultiMediaMessage
-} from '@/ai/baml_client';
+import { MultiMediaMessage } from '@/ai/baml_client';
 import { Observation, ObservationRetentionOptions, ObservationRole, ObservationSource } from './observation';
-import z from 'zod';
-import EventEmitter from 'eventemitter3';
 import { jsonToObservableData, MultiMediaJson, observableDataToJson } from './serde';
 import { applyMask, maskObservations } from './masking';
-import { mergeMessages } from './util';
-import { Image as BamlImage} from '@boundaryml/baml';
+import { Image as BamlImage } from '@boundaryml/baml';
 
 // export interface AgentMemoryEvents {
 //     'thought': (thought: string) => void;
@@ -27,41 +22,30 @@ export interface SerializedAgentMemory {
 export interface AgentMemoryOptions {
     instructions?: string | null,
     promptCaching?: boolean,
-    thoughtLimit?: number, // TTL for thoughts
+    thoughtLimit?: number, // limit for thoughts
+    minScreenshots?: number, // keep this many screenshots after batch drop (default: 3)
+    maxScreenshots?: number, // trigger batch drop when exceeding this (default: 12)
 }
 
 export interface MemoryRenderOptions {
 
 }
 
-// export interface FreezeState {
-//     //lastFrozenObservationIndex: number,
-//     // ^ just use length of mask
-//     visibilityMask: boolean[],
-// }
-
-const CACHE_CONTROL_LIMIT = 3; // Anthropic allows max of 4, we use static one on system, 3 can be cyclic
+const DEFAULT_MIN_SCREENSHOTS = 3;
+const DEFAULT_MAX_SCREENSHOTS = 12;
 
 export class AgentMemory {
-    //public readonly events: EventEmitter<AgentMemoryEvents> = new EventEmitter();
     private options: Required<AgentMemoryOptions>;
-
-    // Custom instructions relating to this memory instance (e.g. agent-level and/or task-level instructions)
-    //public readonly instructions: string | null;
-
     private observations: Observation[] = [];
-
-    //private freezeState?: FreezeState;
     private freezeMask?: boolean[];
-    private cacheControlIndices: number[] = [];
 
     constructor(options?: AgentMemoryOptions) {
-        //this.instructions = instructions ?? null;
         this.options = {
             instructions: options?.instructions ?? null,
             promptCaching: options?.promptCaching ?? false,
-            //optimizeForPromptCaching: false,
-            thoughtLimit: options?.thoughtLimit ?? 20
+            thoughtLimit: options?.thoughtLimit ?? 20,
+            minScreenshots: options?.minScreenshots ?? DEFAULT_MIN_SCREENSHOTS,
+            maxScreenshots: options?.maxScreenshots ?? DEFAULT_MAX_SCREENSHOTS,
         };
     }
 
@@ -70,33 +54,53 @@ export class AgentMemory {
         return this.options.instructions;
     }
 
-    public async render(options?: MemoryRenderOptions): Promise<MultiMediaMessage[]> {
-        if (this.options.promptCaching && this.cacheControlIndices.length >= CACHE_CONTROL_LIMIT) {
-            this.freezeMask = undefined;
-            this.cacheControlIndices = [];
-        }
-        const mask = await maskObservations(this.observations, this.freezeMask);
+    public get minScreenshots() {
+        return this.options.minScreenshots;
+    }
 
+    public get maxScreenshots() {
+        return this.options.maxScreenshots;
+    }
+
+    public async render(options?: MemoryRenderOptions): Promise<MultiMediaMessage[]> {
+        // Check if we need to batch drop (reset freeze mask to trigger limit-based culling)
+        if (this.options.promptCaching && this.freezeMask) {
+            const visibleScreenshots = this.countVisibleScreenshots(this.freezeMask);
+            if (visibleScreenshots > this.options.maxScreenshots) {
+                // Trigger batch drop by resetting freeze mask
+                // Masking will then apply minScreenshots limit
+                this.freezeMask = undefined;
+            }
+        }
+
+        const mask = await maskObservations(this.observations, this.freezeMask);
         const visibleObservations = applyMask(this.observations, mask);
 
-        const lastVisible = visibleObservations.at(-1);
-        if (lastVisible) this.cacheControlIndices.push(lastVisible.index); // index WRT full observation list
-        
         let messages: MultiMediaMessage[] = [];
-        for (const { observation, index } of visibleObservations) {
+        for (const { observation } of visibleObservations) {
             const message = await observation.render({
                 prefix: observation.source.startsWith('action:taken') || observation.source.startsWith('thought') ?
-                    [`[${new Date(observation.timestamp).toTimeString().split(' ')[0]}]: `] : [],
-                cacheControl: this.options.promptCaching && this.cacheControlIndices.includes(index)
+                    [`[${new Date(observation.timestamp).toTimeString().split(' ')[0]}]: `] : []
             });
             messages.push(message);
         }
-        
+
+        // Freeze current visibility for next render (cache control is handled in BAML via loop.last)
         if (this.options.promptCaching) {
-            this.freezeMask = mask;   
+            this.freezeMask = mask;
         }
 
         return messages;
+    }
+
+    private countVisibleScreenshots(mask: boolean[]): number {
+        let count = 0;
+        for (let i = 0; i < mask.length && i < this.observations.length; i++) {
+            if (mask[i] && this.observations[i].retention?.type === 'screenshot') {
+                count++;
+            }
+        }
+        return count;
     }
 
     public async simpleRender(): Promise<(BamlImage | string)[]> {

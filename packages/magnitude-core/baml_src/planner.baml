@@ -25,7 +25,7 @@ template_string RenderMultiMediaContentParts(parts: MultiMediaContentPart[]) #"
 
 template_string RenderMessages(messages: MultiMediaMessage[]) #"
     {% for message in messages -%}
-    {%if message.cacheControl %}
+    {%if loop.last %}
     {{ _.role(message.role, cache_control={"type": "ephemeral"}) }}
     {{ RenderMultiMediaContentParts(message.content) }}
     {%else%}
@@ -71,7 +71,7 @@ template_string DescribeConnectorInstructions(memory: AgentContext) #"
 "#
 
 template_string InstructionsWithContext(memory: AgentContext, instructions: string) #"
-    {{ _.role("system", cache_control={"type": "ephemeral"}) }}
+    {{ _.role("system") }}
     <instructions>
     {{ instructions }}
     {%if memory.instructions %}

@@ -7,6 +7,11 @@ import logger from "@/logger";
 import { Logger } from 'pino';
 import sharp from 'sharp';
 
+// With batch-drop caching strategy (accumulate to max, drop to min)
+// Optimal cycle is ~10 turns between cache invalidations
+const DEFAULT_MIN_SCREENSHOTS = 3;
+const DEFAULT_MAX_SCREENSHOTS = 12;
+
 /**
  * Generic desktop automation interface.
  * Implementations can use any desktop automation technology
@@ -46,7 +51,8 @@ export interface DesktopInterface {
 export interface DesktopConnectorOptions {
     desktopInterface: DesktopInterface;
     virtualScreenDimensions?: { width: number; height: number };
-    minScreenshots?: number;
+    minScreenshots?: number; // keep this many after batch drop
+    maxScreenshots?: number; // trigger batch drop when exceeding this
 }
 
 export class DesktopConnector implements AgentConnector {
@@ -97,9 +103,9 @@ export class DesktopConnector implements AgentConnector {
             Observation.fromConnector(
                 this.id,
                 transformedImage,
-                { 
-                    type: 'screenshot', 
-                    limit: this.options.minScreenshots ?? 2,
+                {
+                    type: 'screenshot',
+                    limit: this.options.minScreenshots ?? DEFAULT_MIN_SCREENSHOTS,
                     dedupe: true
                 }
             )
