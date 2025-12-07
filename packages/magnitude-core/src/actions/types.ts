@@ -3,7 +3,7 @@
  * Micro converts intents into web actions.
  */
 
-import { SwitchTabWebAction } from "@/web/types";
+import { SwitchTabWebAction } from "magnitude-harness";
 
 export interface Action {
     variant: string,

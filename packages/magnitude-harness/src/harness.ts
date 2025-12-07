@@ -1,14 +1,13 @@
 import { Page, Browser, BrowserContext, PageScreenshotOptions } from "playwright";
-import { ClickWebAction, ScrollWebAction, SwitchTabWebAction, TypeWebAction, WebAction } from '@/web/types';
-import { PageStabilityAnalyzer } from "./stability";
-import { parseTypeContent } from "./util";
-import { ActionVisualizer, ActionVisualizerOptions } from "./visualizer";
+import { ClickWebAction, ScrollWebAction, SwitchTabWebAction, TypeWebAction, WebAction } from '@/types';
+import { PageStabilityAnalyzer } from "@/stability";
+import { parseTypeContent } from "@/util";
+import { ActionVisualizer, ActionVisualizerOptions } from "@/visualizer";
 import logger from "@/logger";
-import { TabManager, TabState } from "./tabs";
-import { DOMTransformer } from "./transformer";
-import { Image } from '@/memory/image';
+import { TabManager, TabState } from "@/tabs";
+import { DOMTransformer } from "@/transformer";
+import { Image } from "@/image";
 import EventEmitter from "eventemitter3";
-//import { StateComponent } from "@/facets";
 
 
 export interface WebHarnessOptions {
@@ -106,26 +105,23 @@ export class WebHarness { // implements StateComponent
 
     async screenshot(options: PageScreenshotOptions = {}): Promise<Image> {
         /**
-         * Get b64 encoded string of screenshot (PNG) with screen dimensions
+         * Get screenshot as Image with rescaled dimensions based on DPR
          */
-        
-        // Target page, context or browser has been closed
-        
+
         let dpr!: number;
-        let buffer!: Buffer<ArrayBufferLike>;
+        let buffer!: Buffer;
 
         const retries = 3;
 
         for (let attempt = 0; attempt <= retries; attempt++) {
             try {
                 dpr = await this.page.evaluate(() => window.devicePixelRatio)
-                buffer = await this.page.screenshot({ type: 'png', ...options }, );
+                buffer = await this.page.screenshot({ type: 'png', ...options });
                 break; // Success! Exit the retry loop
             } catch (err) {
                 // A few possibilities:
                 // 1. Target page, context or browser has been closed
                 // 2. Page navigation in progress
-                // In theory 2 shouldn't shouldn't happen during typical execution as we wait for page load - unless screenshot is triggered at an usual time.
                 const error = err as Error;
                 if (error.message.includes('Target page, context or browser has been closed')) {
                     // Irrecoverable, no point in retrying
@@ -136,16 +132,15 @@ export class WebHarness { // implements StateComponent
                 }
             }
         }
-        const base64data = buffer.toString('base64');
 
-        const image = Image.fromBase64(base64data);
+        const image = Image.fromBuffer(buffer);
 
-        // Now, need to rescale the image based on DPR. This is so that:
-        // (1) Save on tokens, dont need huge high res images
-        // (2) More importantly, clicks happen in the standard resolution space, so need to do this for coordinates to be correct
-        //     for any agent not using a virtual screen space (e.g. those that aren't Claude)
+        // Rescale image based on DPR for:
+        // (1) Save on tokens, don't need huge high res images
+        // (2) Ensure coordinates are correct for agents not using virtual screen space
         const { width, height } = await image.getDimensions();
         const rescaledImage = await image.resize(width / dpr, height / dpr);
+
         return rescaledImage;
     }
  

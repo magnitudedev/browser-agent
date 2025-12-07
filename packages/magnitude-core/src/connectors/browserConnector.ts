@@ -1,16 +1,12 @@
 import { AgentConnector } from ".";
-//import { Observation, BamlRenderable } from "@/memory";
-import { WebHarness } from "@/web/harness";
+import { WebHarness, BrowserOptions, BrowserProvider, TabState, ActionVisualizerOptions } from "magnitude-harness";
 import { ActionDefinition } from '@/actions';
 import { webActions } from '@/actions/webActions';
 import { Browser, BrowserContext, BrowserContextOptions, LaunchOptions } from "playwright";
-import { BrowserOptions, BrowserProvider } from "@/web/browserProvider";
 import logger from "@/logger";
 import { Logger } from 'pino';
-import { TabState } from '@/web/tabs';
 import { Observation } from "@/memory/observation";
 import { Image } from "@/memory/image";
-import { ActionVisualizerOptions } from "@/web/visualizer";
 
 // export type BrowserOptions = ({ instance: Browser } | { launchOptions?: LaunchOptions }) & {
 //     contextOptions?: BrowserContextOptions;

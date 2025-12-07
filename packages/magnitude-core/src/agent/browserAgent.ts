@@ -5,7 +5,7 @@ import { buildDefaultBrowserAgentOptions } from "@/ai/util";
 import { LLMClient } from "@/ai/types";
 import { Schema, ZodSchema } from "zod";
 import z from "zod";
-import { renderMinimalAccessibilityTree } from "@/web/util";
+import { renderMinimalAccessibilityTree } from "magnitude-harness";
 import { narrateAgent, narrateBrowserAgent } from "./narrator";
 import { PartitionOptions, partitionHtml, MarkdownSerializerOptions, serializeToMarkdown } from 'magnitude-extract';
 import EventEmitter from "eventemitter3";

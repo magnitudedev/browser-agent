@@ -9,12 +9,12 @@ import logger from "@/logger";
 import { Logger } from 'pino';
 import { BugDetectedFailure, MisalignmentFailure } from "@/common";
 import { LLMClient, ModelUsage } from "@/ai/types";
-import { TabState } from "@/web/tabs";
+import { TabState } from "magnitude-harness";
 import { ActionDefinition } from "@/actions";
 import TypeBuilder from "./baml_client/type_builder";
 import { Schema, z } from 'zod';
 import { convertActionDefinitionsToBaml, convertZodToBaml } from "@/actions/util";
-import { Image } from '@/memory/image';
+import { Image, imageToBaml } from '@/memory/image';
 import EventEmitter from "eventemitter3";
 import { MultiMediaContentPart } from "@/memory/rendering";
 
@@ -222,7 +222,7 @@ export class ModelHarness {
 
         const resp = await this.baml.ExtractData(
             instructions,
-            await screenshot.toBaml(),
+            await imageToBaml(screenshot),
             domContent,
             this.options.llm.provider === 'claude-code',
             { tb }

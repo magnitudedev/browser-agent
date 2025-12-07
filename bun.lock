@@ -38,7 +38,7 @@
     },
     "packages/magnitude-core": {
       "name": "magnitude-core",
-      "version": "0.2.32",
+      "version": "0.3.0",
       "bin": {
         "magnus": "dist/cli.js",
       },
@@ -49,6 +49,7 @@
         "commander": "^13.1.0",
         "eventemitter3": "^5.0.1",
         "magnitude-extract": "0.0.2",
+        "magnitude-harness": "0.0.1",
         "object-hash": "^3.0.0",
         "pino": "^9.6.0",
         "pino-pretty": "^13.0.0",
@@ -87,15 +88,37 @@
         "typescript": "^5.0.0",
       },
     },
+    "packages/magnitude-harness": {
+      "name": "magnitude-harness",
+      "version": "0.0.1",
+      "bin": {
+        "magnitude-harness": "dist/cli.js",
+      },
+      "dependencies": {
+        "commander": "^13.1.0",
+        "eventemitter3": "^5.0.1",
+        "object-hash": "^3.0.0",
+        "pino": "^9.6.0",
+        "pino-pretty": "^13.0.0",
+        "playwright": "npm:patchright@^1.52.0",
+        "sharp": "^0.33.5",
+      },
+      "devDependencies": {
+        "@commander-js/extra-typings": "^12.1.0",
+        "@types/node": "^22.13.4",
+        "pkgroll": "^2.10.0",
+        "typescript": "~5.7.2",
+      },
+    },
     "packages/magnitude-mcp": {
       "name": "magnitude-mcp",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "bin": {
         "magnitude-mcp": "dist/index.js",
       },
       "dependencies": {
         "@modelcontextprotocol/sdk": "^1.18.0",
-        "magnitude-core": "^0.2.32",
+        "magnitude-core": "^0.3.0",
         "patchright": "^1.49.0",
         "zod": "^3.24.2",
         "zod-to-json-schema": "^3.24.5",
@@ -108,7 +131,7 @@
     },
     "packages/magnitude-test": {
       "name": "magnitude-test",
-      "version": "0.3.11",
+      "version": "0.3.12",
       "bin": {
         "magnitude": "dist/cli.js",
       },
@@ -201,7 +224,7 @@
 
     "@clack/prompts": ["@clack/prompts@0.11.0", "", { "dependencies": { "@clack/core": "0.5.0", "picocolors": "^1.0.0", "sisteransi": "^1.0.5" } }, "sha512-pMN5FcrEw9hUkZA4f+zLlzivQSeQf5dRGJjSUbvVYDLvpKCdQx5OaknvKzgbtXOizhP+SJJJjqEbOe55uKKfAw=="],
 
-    "@commander-js/extra-typings": ["@commander-js/extra-typings@14.0.0", "", { "peerDependencies": { "commander": "~14.0.0" } }, "sha512-hIn0ncNaJRLkZrxBIp5AsW/eXEHNKYQBh0aPdoUqNgD+Io3NIykQqpKFyKcuasZhicGaEZJX/JBSIkZ4e5x8Dg=="],
+    "@commander-js/extra-typings": ["@commander-js/extra-typings@12.1.0", "", { "peerDependencies": { "commander": "~12.1.0" } }, "sha512-wf/lwQvWAA0goIghcb91dQYpkLBcyhOhQNqG/VgWhnKzgt+UOMvra7EX/2fv70arm5RW+PUHoQHHDa6/p77Eqg=="],
 
     "@emnapi/runtime": ["@emnapi/runtime@1.4.3", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-pBPWdu6MLKROBX05wSNKcNb++m5Er+KQ9QkB+WVM+pW2Kx9hoSrVTnu3BdkI5eBLZoKu/J6mW/B6i6bJB2ytXQ=="],
 
@@ -859,6 +882,8 @@
 
     "magnitude-extract": ["magnitude-extract@workspace:packages/magnitude-extract"],
 
+    "magnitude-harness": ["magnitude-harness@workspace:packages/magnitude-harness"],
+
     "magnitude-mcp": ["magnitude-mcp@workspace:packages/magnitude-mcp"],
 
     "magnitude-test": ["magnitude-test@workspace:packages/magnitude-test"],
@@ -1243,6 +1268,8 @@
 
     "@changesets/write/prettier": ["prettier@2.8.8", "", { "bin": { "prettier": "bin-prettier.js" } }, "sha512-tdN8qQGvNjw4CHbY+XXk0JgCXn9QiF21a55rBe5LJAU+kDyC4WQn4+awm2Xfk2lQMk5fKup9XgzTZtGkjBdP9Q=="],
 
+    "@commander-js/extra-typings/commander": ["commander@14.0.0", "", {}, "sha512-2uM9rYjPvyq39NwLRqaiLtWHyDC1FvryJDa2ATTVims5YAS4PupsEQsDvP14FqhFr0P49CYDugi59xaxJlTXRA=="],
+
     "@isaacs/cliui/string-width": ["string-width@5.1.2", "", { "dependencies": { "eastasianwidth": "^0.2.0", "emoji-regex": "^9.2.2", "strip-ansi": "^7.0.1" } }, "sha512-HnLOCR3vjcY8beoNLtcjZ5/nxn2afmME6lhrDrebokqMap+XbeW8n9TXpPDOqdGK5qcI3oT0GKTW6wC7EMiVqA=="],
 
     "@isaacs/cliui/strip-ansi": ["strip-ansi@7.1.0", "", { "dependencies": { "ansi-regex": "^6.0.1" } }, "sha512-iq6eVVI64nQQTRYq2KtEg2d2uU7LElhTJwsH4YzIHZshxlgZms/wIc4VoDQTlG/IvVIrBKG06CrZnp0qv7hkcQ=="],
@@ -1289,9 +1316,13 @@
 
     "magnitude-extract/typescript": ["typescript@5.8.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-p1diW6TqL9L07nNxvRMM7hMMw4c5XOo/1ibL4aAIGmSAt9slTE1Xgw5KWuof2uTOvCg9BY7ZRi+GaF+7sfgPeQ=="],
 
+    "magnitude-harness/typescript": ["typescript@5.7.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-84MVSjMEHP+FQRPy3pX9sTVV/INIex71s9TL2Gm5FG/WG1SqXeKyZ0k7/blY/4FdOzI12CBy1vGc4og/eus0fw=="],
+
     "magnitude-mcp/@types/node": ["@types/node@20.19.2", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-9pLGGwdzOUBDYi0GNjM97FIA+f92fqSke6joWeBjWXllfNxZBs7qeMF7tvtOIsbY45xkWkxrdwUfUf3MnQa9gA=="],
 
     "magnitude-mcp/typescript": ["typescript@5.8.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-p1diW6TqL9L07nNxvRMM7hMMw4c5XOo/1ibL4aAIGmSAt9slTE1Xgw5KWuof2uTOvCg9BY7ZRi+GaF+7sfgPeQ=="],
+
+    "magnitude-test/@commander-js/extra-typings": ["@commander-js/extra-typings@14.0.0", "", { "peerDependencies": { "commander": "~14.0.0" } }, "sha512-hIn0ncNaJRLkZrxBIp5AsW/eXEHNKYQBh0aPdoUqNgD+Io3NIykQqpKFyKcuasZhicGaEZJX/JBSIkZ4e5x8Dg=="],
 
     "magnitude-test/commander": ["commander@14.0.0", "", {}, "sha512-2uM9rYjPvyq39NwLRqaiLtWHyDC1FvryJDa2ATTVims5YAS4PupsEQsDvP14FqhFr0P49CYDugi59xaxJlTXRA=="],
 

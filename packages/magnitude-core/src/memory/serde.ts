@@ -1,9 +1,9 @@
 /**
  * Utilities for converting multi-media observation data to/from JSON
  */
-import { Base64Image } from "@/web/types";
+import { Base64Image } from "magnitude-harness";
 import { RenderableContent, ObservableDataObject } from "./observation";
-import { Image } from './image';
+import { Image, imageToJson } from './image';
 
 
 
@@ -42,7 +42,7 @@ export type MultiMediaJson = MultiMediaPrimitive | MultiMediaArray | MultiMediaO
 
 export async function observableDataToJson(data: RenderableContent): Promise<MultiMediaJson> {
     if (data instanceof Image) {
-        return await data.toJson();//return imageToJson(data);
+        return await imageToJson(data);
     }
 
     if (typeof data === 'string' || typeof data === 'number' || typeof data === 'boolean') {

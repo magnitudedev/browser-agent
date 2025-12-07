@@ -3,7 +3,7 @@
  */
 import { Image as BamlImage } from '@boundaryml/baml';
 import { RenderableContent, ObservableDataObject, ObservableDataArray, ObservableDataPrimitive } from '@/memory/observation';
-import { Image } from '@/memory/image';
+import { Image, imageToBaml } from '@/memory/image';
 
 
 export type MultiMediaContentPart = BamlImage | string;
@@ -23,7 +23,7 @@ async function buildXmlPartsRecursive(
     const indent = '  '.repeat(indentLevel);
 
     if (data instanceof Image) {
-        const bamlImg = await data.toBaml();
+        const bamlImg = await imageToBaml(data);
         if (bamlImg) {
             partsList.push(bamlImg);
         }

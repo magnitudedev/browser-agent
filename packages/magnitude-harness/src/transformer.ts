@@ -1,5 +1,5 @@
 import type { Page } from 'playwright';
-import getShadowDOMInputAdapterScript from './scripts/shadowDOMInputAdapter';
+import getShadowDOMInputAdapterScript from '@/scripts/shadowDOMInputAdapter';
 import logger from '@/logger';
 
 export class DOMTransformer {

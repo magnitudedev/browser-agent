@@ -1,23 +1,3 @@
-import logger from "@/logger";
-
-// export interface RetryOptions {
-//     errorSubstrings: string[],
-//     retryLimit: number,
-//     delayMs: number,
-//     warn: boolean
-// }
-
-// export type RetryOptions =
-//     ({ errorSubstrings: string[] } | { retryAll: true }) &
-//     {retryLimit: number,
-//     delayMs: number,
-//     warn: boolean
-// }
-
-// export const DEFAULT_RETRY_OPTIONS = {
-
-// }
-
 export type RetryMode = {
     mode: 'retry_on_partial_message',
     errorSubstrings: string[],
@@ -29,7 +9,6 @@ export type RetryParams = {
     retryLimit: number,
     delayMs: number,
     showWarnOnRetry: boolean,
-    //throw: boolean
 }
 
 export type RetryOptions = RetryMode & RetryParams;
@@ -50,14 +29,13 @@ export async function retryOnError<T>(
     fnToRetry: () => Promise<T>,
     retryOptions: RetryMode & Partial<RetryParams>
 ): Promise<T> {
-    let lastError: any;
+    let lastError: unknown;
 
     const options: RetryOptions = {
         ...retryOptions,
         retryLimit: retryOptions.retryLimit ?? 3,
         delayMs: retryOptions.delayMs ?? 200,
         showWarnOnRetry: retryOptions.showWarnOnRetry ?? false,
-        //throw: retryOptions.throw ?? true
     } as RetryOptions;
 
     if (options.retryLimit < 0) {
@@ -67,25 +45,23 @@ export async function retryOnError<T>(
     for (let attempt = 0; attempt <= options.retryLimit; attempt++) {
         try {
             return await fnToRetry();
-        } catch (error: any) {
+        } catch (error: unknown) {
             lastError = error;
-
-            const errorMessage = String(error?.message ?? error);
+            const errorMessage = String((error as Error)?.message ?? error);
 
             if (options.mode === 'retry_all') {
                 if (options.showWarnOnRetry) {
-                    logger.warn(`Retrying on: ${errorMessage}`);
+                    console.warn(`Retrying on: ${errorMessage}`);
                 }
             } else if (options.mode === 'retry_on_partial_message') {
                 const includesSubstring = options.errorSubstrings.some((substring) => errorMessage.includes(substring));
 
                 if (includesSubstring) {
                     if (options.showWarnOnRetry) {
-                        logger.warn(`Retrying on: ${errorMessage}`);
+                        console.warn(`Retrying on: ${errorMessage}`);
                     }
                 } else {
-                    // Error message does NOT contain the target substring. This error is not retryable.
-                    throw lastError; // Throw this current error immediately.
+                    throw lastError;
                 }
             }
         }
@@ -93,7 +69,6 @@ export async function retryOnError<T>(
     }
 
     throw lastError;
-    //if (options.throw) throw lastError;
 }
 
 /**
