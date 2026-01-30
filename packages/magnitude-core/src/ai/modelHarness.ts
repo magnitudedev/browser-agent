@@ -170,8 +170,8 @@ export class ModelHarness {
         this.events.emit('tokensUsed', usage);
         //console.log("Usage:", usage);
 
-        this.prevTotalInputTokens = inputTokens;
-        this.prevTotalOutputTokens = outputTokens;
+        this.prevTotalInputTokens += inputTokens;
+        this.prevTotalOutputTokens += outputTokens;
     }
 
     async partialAct<T>(
