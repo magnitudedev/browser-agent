@@ -1,5 +1,12 @@
 # magnitude-test
 
+## 0.3.13
+
+### Patch Changes
+
+- Updated dependencies [[`b1771a4`](https://github.com/magnitudedev/browser-agent/commit/b1771a4ee6e0d5064e67fd3de52be13eabbe023b), [`dedb7c6`](https://github.com/magnitudedev/browser-agent/commit/dedb7c644ffd629f08896bac205b22152075050b), [`2ef1102`](https://github.com/magnitudedev/browser-agent/commit/2ef110264e65e06f2dff0d60ffb5cd36ae636a6e)]:
+  - magnitude-core@0.3.1
+
 ## 0.3.12
 
 ### Patch Changes
