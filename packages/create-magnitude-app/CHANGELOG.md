@@ -1,5 +1,11 @@
 # create-magnitude-app
 
+## 0.0.8
+
+### Patch Changes
+
+- [`dedb7c6`](https://github.com/magnitudedev/browser-agent/commit/dedb7c644ffd629f08896bac205b22152075050b) Thanks [@anerli](https://github.com/anerli)! - change default model to haiku 4.5
+
 ## 0.0.7
 
 ### Patch Changes
