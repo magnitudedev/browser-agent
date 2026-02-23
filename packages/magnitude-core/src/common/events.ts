@@ -23,4 +23,5 @@ export interface AgentEvents {
     'resume': () => void;
 
     'tokensUsed': (usage: ModelUsage) => void;
+    'maxStepsReached': (task: string, maxSteps: number) => void;
 }
