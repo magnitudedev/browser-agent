@@ -34,6 +34,20 @@ export const mouseDoubleClickAction = createAction({
     render: ({ x, y }) => `⊙ double click (${x}, ${y})`
 });
 
+export const mouseHoverAction = createAction({
+    name: 'mouse:hover',
+    description: "Hover over an element to reveal tooltips, dropdown menus, or hidden content",
+    schema: z.object({
+        x: z.number().int(),
+        y: z.number().int(),
+    }),
+    resolver: async ({ input: { x, y }, agent }) => {
+        const web = agent.require(BrowserConnector);
+        await web.getHarness().hover({ x, y });
+    },
+    render: ({ x, y }) => `◎ hover (${x}, ${y})`
+});
+
 export const mouseRightClickAction = createAction({
     name: 'mouse:right_click',
     schema: z.object({
@@ -197,6 +211,7 @@ export const webActions = [
     clickCoordAction,
     mouseDoubleClickAction,
     mouseRightClickAction,
+    mouseHoverAction,
     scrollCoordAction,
     mouseDragAction,
     newTabAction,
