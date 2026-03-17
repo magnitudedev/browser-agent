@@ -48,16 +48,14 @@ export class BrowserProvider {
         const instance: BrowserProvider | undefined = (globalThis as any).__magnitude__?.browserProvider;
         if (!instance) return;
 
-        for (const [key, activeBrowser] of Object.entries(instance.activeBrowsers)) {
-            try {
+        await Promise.allSettled(
+            Object.values(instance.activeBrowsers).map(async (activeBrowser) => {
                 const browser = await activeBrowser.browserPromise;
                 await browser.close();
-            } catch {
-                // Ignore errors (browser may already be closed)
-            }
-            delete instance.activeBrowsers[key];
-        }
+            })
+        );
 
+        instance.activeBrowsers = {};
         (globalThis as any).__magnitude__.browserProvider = undefined;
     }
 

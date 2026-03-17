@@ -27,7 +27,7 @@ describe('BrowserProvider.reset()', () => {
         const instance = BrowserProvider.getInstance();
 
         // Create a context which launches a real browser
-        const context = await instance.newContext({ launchOptions: { headless: true } });
+        await instance.newContext({ launchOptions: { headless: true } });
 
         // Verify a browser is tracked
         expect(Object.keys((instance as any).activeBrowsers).length).toBeGreaterThan(0);
@@ -43,7 +43,7 @@ describe('BrowserProvider.reset()', () => {
 
     test('does not throw if browser is already closed', async () => {
         const instance = BrowserProvider.getInstance();
-        const context = await instance.newContext({ launchOptions: { headless: true } });
+        await instance.newContext({ launchOptions: { headless: true } });
 
         // Close the browser before reset
         const activeBrowser = Object.values((instance as any).activeBrowsers)[0] as any;
