@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Box, Text } from 'ink';
 import { RegisteredTest } from '@/discovery/types';
 import { TestFailure } from '@/runner/state';
@@ -18,16 +18,19 @@ export function Summary({ testStates, registeredTests, model }: SummaryProps) {
     const statusCounts = { pending: 0, running: 0, passed: 0, failed: 0, cancelled: 0 };
     const failuresWithContext: Array<{ filepath: string; groupName?: string; testTitle: string; failure: TestFailure }> = [];
 
-    const testContextMap = new Map<string, { filepath: string; groupName?: string; testTitle: string }>();
-    for (const test of registeredTests) {
-        testContextMap.set(test.id, { filepath: test.filepath, groupName: test.group, testTitle: test.title });
-    }
+    const testContextMap = useMemo(() => {
+        const map = new Map<string, { filepath: string; groupName?: string; testTitle: string }>();
+        for (const test of registeredTests) {
+            map.set(test.id, { filepath: test.filepath, groupName: test.group, testTitle: test.title });
+        }
+        return map;
+    }, [registeredTests]);
 
     for (const [testId, state] of Object.entries(testStates)) {
         statusCounts[state.status]++;
-        if (state.modelUsage.length > 0) {
-            totalInputTokens += state.modelUsage[0].inputTokens;
-            totalOutputTokens += state.modelUsage[0].outputTokens;
+        for (const usage of state.modelUsage) {
+            totalInputTokens += usage.inputTokens;
+            totalOutputTokens += usage.outputTokens;
         }
         if (state.failure) {
             const context = testContextMap.get(testId);

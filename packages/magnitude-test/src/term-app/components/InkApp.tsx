@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Box, Text, useApp, useInput, useStdout } from 'ink';
 import { RegisteredTest, MagnitudeConfig } from '@/discovery/types';
 import { AllTestStates } from '../types';
@@ -59,7 +59,7 @@ export function InkApp({ tests, config, initialStates, onReady }: InkAppProps) {
     });
 
     const width = Math.min(stdout?.columns ?? MAX_APP_WIDTH, MAX_APP_WIDTH);
-    const grouped = groupRegisteredTestsForDisplay(tests);
+    const grouped = useMemo(() => groupRegisteredTestsForDisplay(tests), [tests]);
 
     return (
         <Box flexDirection="column" width={width}>
