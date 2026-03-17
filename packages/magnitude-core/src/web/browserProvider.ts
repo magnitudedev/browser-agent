@@ -44,6 +44,23 @@ export class BrowserProvider {
         return (globalThis as any).__magnitude__.browserProvider;
     }
 
+    public static async reset(): Promise<void> {
+        const instance: BrowserProvider | undefined = (globalThis as any).__magnitude__?.browserProvider;
+        if (!instance) return;
+
+        for (const [key, activeBrowser] of Object.entries(instance.activeBrowsers)) {
+            try {
+                const browser = await activeBrowser.browserPromise;
+                await browser.close();
+            } catch {
+                // Ignore errors (browser may already be closed)
+            }
+            delete instance.activeBrowsers[key];
+        }
+
+        (globalThis as any).__magnitude__.browserProvider = undefined;
+    }
+
     private async _launchOrReuseBrowser(options: LaunchOptions): Promise<ActiveBrowser> {
         // hash options
         const hash = objectHash({
