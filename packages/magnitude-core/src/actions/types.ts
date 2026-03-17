@@ -10,12 +10,17 @@ export interface Action {
     [key: string]: any
 }
 
-export type ActionIntent = ClickIntent | TypeIntent | ScrollIntent | SwitchTabIntent; // really we want switch tab to be an option only if >1 tab
+export type ActionIntent = ClickIntent | HoverIntent | TypeIntent | ScrollIntent | SwitchTabIntent; // really we want switch tab to be an option only if >1 tab
 export type Intent = ActionIntent | CheckIntent;
 //export type Recipe = Ingredient[];
 
 export interface ClickIntent {
     variant: 'click';
+    target: string;
+}
+
+export interface HoverIntent {
+    variant: 'hover';
     target: string;
 }
 

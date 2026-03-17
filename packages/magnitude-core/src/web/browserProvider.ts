@@ -44,6 +44,21 @@ export class BrowserProvider {
         return (globalThis as any).__magnitude__.browserProvider;
     }
 
+    public static async reset(): Promise<void> {
+        const instance: BrowserProvider | undefined = (globalThis as any).__magnitude__?.browserProvider;
+        if (!instance) return;
+
+        await Promise.allSettled(
+            Object.values(instance.activeBrowsers).map(async (activeBrowser) => {
+                const browser = await activeBrowser.browserPromise;
+                await browser.close();
+            })
+        );
+
+        instance.activeBrowsers = {};
+        (globalThis as any).__magnitude__.browserProvider = undefined;
+    }
+
     private async _launchOrReuseBrowser(options: LaunchOptions): Promise<ActiveBrowser> {
         // hash options
         const hash = objectHash({

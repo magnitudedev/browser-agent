@@ -23,6 +23,7 @@ export * from '@/common';
 export * from "@/telemetry";
 export { buildDefaultBrowserAgentOptions } from "@/ai/util";
 export { logger } from './logger';
+export { z } from 'zod';
 //export { ModelUsage } from '@/ai/modelHarness';
 
 setLogLevel('OFF');

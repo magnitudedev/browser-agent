@@ -18,8 +18,8 @@
       "default": "./dist/index.cjs"
     },
     "import": {
-      "types": "./dist/index.d.mts",
-      "default": "./dist/index.mjs"
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
     }
   },
   "repository": {
@@ -59,7 +59,7 @@
   "license": "Apache-2.0",
   "devDependencies": {
     "@types/node": "^22.13.4",
-    "@types/react": "^18.2.0",
+    "@types/react": "^19.0.0",
     "pkgroll": "^2.10.0",
     "typescript": "~5.7.2",
     "playwright": "npm:rebrowser-playwright@^1.52.0"
@@ -67,19 +67,20 @@
   "dependencies": {
     "@commander-js/extra-typings": "^14.0.0",
     "@paralleldrive/cuid2": "^2.2.2",
-    "@types/terminal-kit": "^2.5.7",
     "chalk": "^5.4.1",
     "commander": "^14.0.0",
     "dotenv": "^16.5.0",
     "esbuild": "^0.25.1",
     "glob": "^11.0.1",
+    "ink": "^6.0.0",
+    "ink-spinner": "^5.0.0",
     "jiti": "^2.4.2",
-    "log-update": "^6.1.0",
     "magnitude-core": "0.3.1",
     "pino": "^9.6.0",
     "pino-pretty": "^13.0.0",
     "playwright": "^1.51.0",
     "posthog-node": "^4.18.0",
+    "react": "^19.1.0",
     "std-env": "^3.9.0",
     "zod": "^3.24.2"
   }

@@ -1,5 +1,5 @@
 import { Page, Browser, BrowserContext, PageScreenshotOptions } from "playwright";
-import { ClickWebAction, ScrollWebAction, SwitchTabWebAction, TypeWebAction, WebAction } from '@/web/types';
+import { ClickWebAction, HoverWebAction, ScrollWebAction, SwitchTabWebAction, TypeWebAction, WebAction } from '@/web/types';
 import { PageStabilityAnalyzer } from "./stability";
 import { parseTypeContent } from "./util";
 import { ActionVisualizer, ActionVisualizerOptions } from "./visualizer";
@@ -288,6 +288,15 @@ export class WebHarness { // implements StateComponent
         await this.visualizer.showAll();
     }
 
+    async hover({ x, y }: { x: number, y: number }, options?: { transform: boolean }) {
+        if (options?.transform ?? true) ({ x, y } = await this.transformCoordinates({ x, y }));
+        await Promise.all([
+            this.visualizer.moveVirtualCursor(x, y),
+            this.page.mouse.move(x, y, { steps: 20 })
+        ]);
+        await this.waitForStability();
+    }
+
     async rightClick({ x, y }: { x: number, y: number }, options?: { transform: boolean }) {
         if (options?.transform ?? true) ({ x, y } = await this.transformCoordinates({ x, y }));
         await this._click(x, y, { button: "right" });
@@ -391,6 +400,8 @@ export class WebHarness { // implements StateComponent
     async executeAction(action: WebAction) {
         if (action.variant === 'click') {
             await this.click(action);
+        } else if (action.variant === 'hover') {
+            await this.hover(action);
         } else if (action.variant === 'type') {
             await this.clickAndType(action);
         } else if (action.variant === 'scroll') {

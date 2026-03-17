@@ -14,7 +14,7 @@ export type Base64Image = `data:image/${'jpeg'|'png'|'gif'};base64,${string}`;
 //     variant: ActionVariant
 // }
 
-export type WebAction = NavigateWebAction | ClickWebAction | TypeWebAction | ScrollWebAction | SwitchTabWebAction;
+export type WebAction = NavigateWebAction | ClickWebAction | HoverWebAction | TypeWebAction | ScrollWebAction | SwitchTabWebAction;
 
 // Currently only emitted synthetically
 export interface NavigateWebAction {
@@ -24,6 +24,12 @@ export interface NavigateWebAction {
 
 export interface ClickWebAction {
     variant: 'click'
+    x: number
+    y: number
+}
+
+export interface HoverWebAction {
+    variant: 'hover'
     x: number
     y: number
 }
