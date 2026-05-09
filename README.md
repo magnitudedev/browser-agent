@@ -88,6 +88,69 @@ For information on how to run tests and integrate into CI/CD see [here](https://
 * Custom actions + prompts at agent and action level
 * Deterministic runs via native caching system *(in progress)*
 
+## ❓ Frequently Asked Questions
+
+### What is Magnitude?
+Magnitude is a **vision-first browser agent framework** that uses visually grounded AI to control browsers with natural language. It scores 94% on WebVoyager benchmarks and enables automation, testing, and data extraction.
+
+### How does Magnitude differ from other browser agents?
+**Traditional approach:** Most agents draw numbered boxes around DOM elements and rely on HTML structure parsing.
+**Magnitude approach:** Uses pixel-level vision coordinates from visually grounded LLMs (Claude Sonnet 4, Qwen-2.5VL 72B). This enables true generalization across complex modern sites and is future-proof for desktop apps/VMs.
+
+### What models does Magnitude support?
+- **Claude Sonnet 4** (recommended for best performance)
+- **Qwen-2.5VL 72B** (alternative option)
+See [LLM Configuration docs](https://docs.magnitude.run/customizing/llm-configuration) for setup.
+
+### How do I get started?
+```bash
+# Create a new project with guided setup
+npx create-magnitude-app
+```
+
+### How do I run tests in an existing project?
+```bash
+npm i --save-dev magnitude-test && npx magnitude init
+```
+This creates `tests/magnitude/` with config and example tests.
+
+### Can Magnitude handle high-level tasks or just clicks?
+Both! Magnitude supports flexible abstraction levels:
+- **High-level tasks:** `agent.act("Create a task")` - plans and executes complex flows
+- **Low-level actions:** `agent.act("Drag task to top")` - precise mouse/keyboard control
+
+### How does data extraction work?
+Use `agent.extract()` with Zod schemas:
+```ts
+const tasks = await agent.extract(
+  "List in progress tasks",
+  z.array(z.object({
+    title: z.string(),
+    description: z.string(),
+    difficulty: z.number().describe("Rate difficulty 1-5")
+  }))
+);
+```
+
+### What is the test runner?
+Magnitude includes a built-in test runner with powerful visual assertions for web app testing. See [Running Tests docs](https://docs.magnitude.run/core-concepts/running-tests) for CI/CD integration.
+
+### Is Magnitude deterministic?
+Deterministic runs via native caching system are **in progress**. Currently, runs may vary slightly due to LLM behavior.
+
+### Where can I find more documentation?
+See [docs.magnitude.run](https://docs.magnitude.run) for guides on:
+- Getting started
+- Core concepts
+- Custom actions and prompts
+- LLM configuration
+- Running tests
+- CI/CD integration
+
+### How can I get help?
+- Join [Discord community](https://discord.gg/VcdpMh9tTy) for questions and suggestions
+- Enterprise users: contact founders@magnitude.run or schedule a call
+
 ## Additional info
 
 Please see [our docs](https://docs.magnitude.run) for more information on how to best build Magnitude automations and test cases.
