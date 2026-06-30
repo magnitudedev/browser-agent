@@ -56,6 +56,26 @@ client<llm> GeminiFlash {
     }
 }
 
+client<llm> GeminiProRequesty {
+    provider "openai-generic"
+    options {
+        base_url "https://router.requesty.ai/v1"
+        api_key env.REQUESTY_API_KEY
+        model "google/gemini-2.5-pro"
+        temperature 0.0
+    }
+}
+
+client<llm> GeminiFlashRequesty {
+    provider "openai-generic"
+    options {
+        base_url "https://router.requesty.ai/v1"
+        api_key env.REQUESTY_API_KEY
+        model "google/gemini-2.5-flash"
+        temperature 0.0
+    }
+}
+
 client<llm> GPT {
     provider openai
     options {
