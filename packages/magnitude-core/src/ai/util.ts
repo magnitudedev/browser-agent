@@ -1,9 +1,15 @@
-import { type LLMClient } from '@/ai/types';
+import { type LLMClient, type OpenAIGenericClient } from '@/ai/types';
 import { Agent, AgentOptions } from "@/agent";
 import { BrowserConnector, BrowserConnectorOptions } from "@/connectors/browserConnector";
 import { completeClaudeCodeAuthFlow } from './claudeCode';
 
 function cleanNestedObject(obj: object): object {
+    if (Array.isArray(obj)) {
+        return obj
+            .filter((value) => value !== null && value !== undefined)
+            .map((value) => typeof value === 'object' ? cleanNestedObject(value) : value);
+    }
+
     // Remove null/undefined key values entirely
     return Object.fromEntries(
         Object.entries(obj)
@@ -15,6 +21,23 @@ function cleanNestedObject(obj: object): object {
                 typeof value === 'object' ? cleanNestedObject(value) : value
             ])
     );
+}
+
+export function isOpenRouterClaude(client: LLMClient): client is OpenAIGenericClient {
+    if (client.provider !== 'openai-generic' || !isClaude(client)) return false;
+    try {
+        const url = new URL(client.options.baseUrl);
+        return url.protocol === 'https:' &&
+            url.hostname.toLowerCase() === 'openrouter.ai' &&
+            url.port === '' &&
+            url.username === '' &&
+            url.password === '' &&
+            url.pathname.replace(/\/+$/, '') === '/api/v1' &&
+            url.search === '' &&
+            url.hash === '';
+    } catch {
+        return false;
+    }
 }
 
 export async function convertToBamlClientOptions(client: LLMClient): Promise<Record<string, any>> {
@@ -86,6 +109,7 @@ export async function convertToBamlClientOptions(client: LLMClient): Promise<Rec
             temperature: temp,
         };
     } else if (client.provider === 'openai-generic') {
+        const promptCaching = isOpenRouterClaude(client) && client.options.promptCaching !== false;
         options = {
             base_url: client.options.baseUrl,
             api_key: client.options.apiKey,
@@ -95,7 +119,8 @@ export async function convertToBamlClientOptions(client: LLMClient): Promise<Rec
                 "HTTP-Referer": "https://magnitude.run",
                 "X-Title": "Magnitude",
                 ...client.options.headers
-            }
+            },
+            ...(promptCaching ? { allowed_role_metadata: ["cache_control"] } : {})
         };
     } else if (client.provider === 'azure-openai') {
         options = {

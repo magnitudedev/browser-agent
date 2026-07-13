@@ -14,7 +14,7 @@ import { ActionDefinition } from "@/actions";
 import { taskActions } from "@/actions/taskActions";
 import { ConnectorInstructions, AgentContext, traceAsync, MultiMediaContentPart } from "@/ai/baml_client";
 import { telemetrifyAgent } from '@/telemetry/events';
-import { isClaude } from '@/ai/util';
+import { isClaude, isOpenRouterClaude } from '@/ai/util';
 import { retryOnError } from '@/common';
 import { renderContentParts } from '@/memory/rendering';
 import { MultiModelHarness } from '@/ai/multiModelHarness';
@@ -101,16 +101,11 @@ export class Agent {
         let doPromptCaching = false;
         for (const client of llms ) {
             // If any LLM is prompt-caching compatible, turn on prompt caching overall for memory etc.
-            if (isClaude(client) && (client.provider === 'anthropic' || client.provider === 'claude-code')) {
+            if ((isClaude(client) && (client.provider === 'anthropic' || client.provider === 'claude-code')) || isOpenRouterClaude(client)) {
                 // Prompt-caching compatible client
-
-                if ('promptCaching' in client.options && client.options.promptCaching !== undefined) {
-                    doPromptCaching = client.options.promptCaching;
-                } else {
-                    // Default to true if not specified, and override on client config to true
-                    doPromptCaching = true;
-                    client.options.promptCaching = true;
-                }
+                const promptCaching = client.options.promptCaching ?? true;
+                client.options.promptCaching = promptCaching;
+                doPromptCaching ||= promptCaching;
             }
         }
 
@@ -123,7 +118,6 @@ export class Agent {
 
         this.memoryOptions = {
             // TODO: maybe do if Gemini or other prompt caching supported providers as well
-            // Claude supports prompt caching but only via Anthropic, not on Bedrock
             promptCaching: doPromptCaching
         };
 
