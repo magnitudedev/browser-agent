@@ -1,4 +1,4 @@
-import { convertToBamlClientOptions } from "./util";
+import { convertToBamlClientOptions, isOpenRouterClaude } from "./util";
 // Import ModularMemoryContext instead of old MemoryContext
 import { b, AgentContext } from "@/ai/baml_client"; 
 import { Image as BamlImage, Collector, ClientRegistry } from "@boundaryml/baml";
@@ -21,6 +21,21 @@ import { MultiMediaContentPart } from "@/memory/rendering";
 interface ModelHarnessOptions {
     llm: LLMClient;
     //promptCaching?: boolean;
+}
+
+interface OpenRouterUsageResponse {
+    usage?: {
+        prompt_tokens?: unknown;
+        completion_tokens?: unknown;
+        prompt_tokens_details?: {
+            cached_tokens?: unknown;
+            cache_write_tokens?: unknown;
+        };
+    };
+}
+
+function tokenCount(value: unknown): number | undefined {
+    return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : undefined;
 }
 
 // export interface ModelUsage {
@@ -88,6 +103,7 @@ export class ModelHarness {
         let outputTokens: number = 0;
         let cacheWriteInputTokens: number = 0;
         let cacheReadInputTokens: number = 0;
+        let inputTokenIncrement: number;
 
         if (this.options.llm.provider === 'anthropic' || this.options.llm.provider === 'claude-code') {
             type AnthropicUsage = { input_tokens: number, cache_creation_input_tokens: number, cache_read_input_tokens: number, output_tokens: number, service_tier: string };
@@ -104,10 +120,30 @@ export class ModelHarness {
                 cacheWriteInputTokens = usage.cache_creation_input_tokens;
                 cacheReadInputTokens = usage.cache_read_input_tokens;
             }
-            
+            inputTokenIncrement = inputTokens;
+        } else if (isOpenRouterClaude(this.options.llm)) {
+            const response = this.collector.last?.calls.at(-1)?.httpResponse?.body.json() as OpenRouterUsageResponse | undefined;
+            const promptTokens = tokenCount(response?.usage?.prompt_tokens);
+            if (promptTokens === undefined) {
+                inputTokens = (this.collector.usage.inputTokens ?? 0) - this.prevTotalInputTokens;
+                outputTokens = (this.collector.usage.outputTokens ?? 0) - this.prevTotalOutputTokens;
+                inputTokenIncrement = inputTokens;
+            } else {
+                const details = response?.usage?.prompt_tokens_details;
+                cacheReadInputTokens = Math.min(promptTokens, tokenCount(details?.cached_tokens) ?? 0);
+                cacheWriteInputTokens = Math.min(
+                    promptTokens - cacheReadInputTokens,
+                    tokenCount(details?.cache_write_tokens) ?? 0
+                );
+                inputTokens = promptTokens - cacheReadInputTokens - cacheWriteInputTokens;
+                outputTokens = tokenCount(response?.usage?.completion_tokens) ??
+                    (this.collector.usage.outputTokens ?? 0) - this.prevTotalOutputTokens;
+                inputTokenIncrement = promptTokens;
+            }
         } else {
             inputTokens = (this.collector.usage.inputTokens ?? 0) - this.prevTotalInputTokens;
             outputTokens = (this.collector.usage.outputTokens ?? 0) - this.prevTotalOutputTokens;
+            inputTokenIncrement = inputTokens;
         }
 
         const model = (this.options.llm.options as any).model ?? 'unknown';
@@ -170,7 +206,7 @@ export class ModelHarness {
         this.events.emit('tokensUsed', usage);
         //console.log("Usage:", usage);
 
-        this.prevTotalInputTokens += inputTokens;
+        this.prevTotalInputTokens += inputTokenIncrement;
         this.prevTotalOutputTokens += outputTokens;
     }
 
