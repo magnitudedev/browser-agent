@@ -1,4 +1,4 @@
-import { Page, Browser, BrowserContext, PageScreenshotOptions } from "playwright";
+import { Page, Browser, BrowserContext, Frame, PageScreenshotOptions, Request } from "playwright";
 import { ClickWebAction, ScrollWebAction, SwitchTabWebAction, TypeWebAction, WebAction } from '@/web/types';
 import { PageStabilityAnalyzer } from "./stability";
 import { parseTypeContent } from "./util";
@@ -9,6 +9,15 @@ import { DOMTransformer } from "./transformer";
 import { Image } from '@/memory/image';
 import EventEmitter from "eventemitter3";
 //import { StateComponent } from "@/facets";
+
+const DEFAULT_STABILITY_TIMEOUT = 5000;
+const BATCH_NAVIGATION_GRACE_MS = 500;
+
+interface ActionBatchState {
+    deferredTimeout: number | null;
+    pageTransitioned: boolean;
+    transitionWaiters: Set<() => void>;
+}
 
 
 export interface WebHarnessOptions {
@@ -35,6 +44,7 @@ export class WebHarness { // implements StateComponent
     private transformer: DOMTransformer;
     private tabs: TabManager;
 
+    private activeActionBatch: ActionBatchState | null = null;
     public readonly events: EventEmitter<WebHarnessEvents> = new EventEmitter();
 
     constructor(context: BrowserContext, options: WebHarnessOptions = {}) {
@@ -98,6 +108,84 @@ export class WebHarness { // implements StateComponent
     async stop() {
         // Clean up tab manager resources
         this.tabs.destroy();
+    }
+
+    async runActionBatch<T>(run: () => Promise<T>): Promise<T> {
+        if (this.activeActionBatch) return run();
+
+        const state: ActionBatchState = {
+            deferredTimeout: null,
+            pageTransitioned: false,
+            transitionWaiters: new Set(),
+        };
+        this.activeActionBatch = state;
+        const watchedPages = new Set<Page>();
+        const markTransition = (): void => {
+            state.pageTransitioned = true;
+            state.transitionWaiters.forEach((resolve) => resolve());
+        };
+        const markFrameNavigation = (frame: Frame): void => {
+            if (frame === frame.page().mainFrame()) markTransition();
+        };
+        const watchPage = (page: Page): void => {
+            if (watchedPages.has(page)) return;
+            watchedPages.add(page);
+            page.on('framenavigated', markFrameNavigation);
+        };
+        const markNewPage = (page: Page): void => {
+            markTransition();
+            watchPage(page);
+        };
+        const markNavigationRequest = (request: Request): void => {
+            if (!request.isNavigationRequest() || request.serviceWorker()) return;
+            const frame = request.frame();
+            if (frame === frame.page().mainFrame()) {
+                markTransition();
+            }
+        };
+
+        try {
+            this.context.pages().forEach(watchPage);
+            this.context.on('page', markNewPage);
+            this.context.on('request', markNavigationRequest);
+            let result!: T;
+            let bodyError: unknown;
+            let bodyFailed = false;
+
+            try {
+                result = await run();
+            } catch (error) {
+                bodyError = error;
+                bodyFailed = true;
+            }
+
+            try {
+                if (state.deferredTimeout !== null) {
+                    const timeout = state.deferredTimeout;
+                    state.deferredTimeout = null;
+                    await this.stability.waitForStability(timeout);
+                }
+            } catch (stabilityError) {
+                if (bodyFailed) {
+                    throw new AggregateError(
+                        [bodyError, stabilityError],
+                        'Action batch and its final stability wait both failed'
+                    );
+                }
+                throw stabilityError;
+            }
+
+            if (bodyFailed) throw bodyError;
+            return result;
+        } finally {
+            this.context.off('page', markNewPage);
+            this.context.off('request', markNavigationRequest);
+            watchedPages.forEach((page) => {
+                page.off('framenavigated', markFrameNavigation);
+            });
+            state.transitionWaiters.clear();
+            this.activeActionBatch = null;
+        }
     }
 
     get page() {
@@ -268,7 +356,7 @@ export class WebHarness { // implements StateComponent
 
 
 
-        await this.waitForStability();
+        await this.waitForStability(undefined, true);
         //await this.visualizer.removeActionVisuals();
     }
 
@@ -291,7 +379,7 @@ export class WebHarness { // implements StateComponent
     async rightClick({ x, y }: { x: number, y: number }, options?: { transform: boolean }) {
         if (options?.transform ?? true) ({ x, y } = await this.transformCoordinates({ x, y }));
         await this._click(x, y, { button: "right" });
-        await this.waitForStability();
+        await this.waitForStability(undefined, true);
     }
 
     async doubleClick({ x, y }: { x: number, y: number }, options?: { transform: boolean }) {
@@ -300,7 +388,7 @@ export class WebHarness { // implements StateComponent
         await this.visualizer.hideAll();
         await this.page.mouse.dblclick(x, y);
         await this.visualizer.showAll();
-        await this.waitForStability();
+        await this.waitForStability(undefined, true);
     }
 
     async drag({ x1, y1, x2, y2 }: { x1: number, y1: number, x2: number, y2: number }, options?: { transform: boolean }) {
@@ -327,7 +415,7 @@ export class WebHarness { // implements StateComponent
 
     async type({ content }: { content: string }) {
         await this._type(content);
-        await this.waitForStability();
+        await this.waitForStability(undefined, content.includes('<enter>'));
     }
 
     async clickAndType({ x, y, content }: { x: number, y: number, content: string }, options?: { transform: boolean }) {
@@ -336,9 +424,9 @@ export class WebHarness { // implements StateComponent
         if (options?.transform ?? true) ({ x, y } = await this.transformCoordinates({ x, y }));
         //console.log(`Post transform: ${x}, ${y}`);
         await this.visualizer.moveVirtualCursor(x, y);
-        this._click(x, y);
+        await this._click(x, y);
         await this._type(content);
-        await this.waitForStability();
+        await this.waitForStability(undefined, true);
     }
     
     async scroll({ x, y, deltaX, deltaY }: { x: number, y: number, deltaX: number, deltaY: number }, options?: { transform: boolean }) {
@@ -351,7 +439,7 @@ export class WebHarness { // implements StateComponent
 
     async switchTab({ index }: { index: number }) {
         await this.tabs.switchTab(index);
-        await this.waitForStability();
+        await this.waitForImmediateStability();
     }
 
     async newTab() {
@@ -363,7 +451,7 @@ export class WebHarness { // implements StateComponent
     async navigate(url: string) {
         // Only wait for DOM content on goto since we handle waiting for network idle etc ourselves
         await this.page.goto(url, { waitUntil: 'domcontentloaded' });
-        await this.waitForStability();
+        await this.waitForImmediateStability();
     }
 
     async selectAll() {
@@ -404,8 +492,50 @@ export class WebHarness { // implements StateComponent
         //await this.visualizer.redrawLastPosition();
     }
 
-    async waitForStability(timeout?: number): Promise<void> {
-        await this.stability.waitForStability(timeout);
+    async waitForStability(timeout?: number, watchForNavigation = false): Promise<void> {
+        const batch = this.activeActionBatch;
+        if (batch) {
+            if (watchForNavigation && !batch.pageTransitioned) {
+                await this.waitForBatchNavigation(batch);
+            }
+            if (batch.pageTransitioned) {
+                await this.waitForImmediateStability(timeout);
+                return;
+            }
+            const effectiveTimeout = timeout ?? DEFAULT_STABILITY_TIMEOUT;
+            batch.deferredTimeout = Math.max(batch.deferredTimeout ?? 0, effectiveTimeout);
+            return;
+        }
+
+        await this.waitForImmediateStability(timeout);
+    }
+
+    private async waitForBatchNavigation(batch: ActionBatchState): Promise<void> {
+        await new Promise<void>((resolve) => {
+            let timer!: ReturnType<typeof setTimeout>;
+            const done = (): void => {
+                clearTimeout(timer);
+                batch.transitionWaiters.delete(done);
+                resolve();
+            };
+            timer = setTimeout(done, BATCH_NAVIGATION_GRACE_MS);
+            batch.transitionWaiters.add(done);
+            if (batch.pageTransitioned) done();
+        });
+    }
+
+    private async waitForImmediateStability(timeout?: number): Promise<void> {
+        const batch = this.activeActionBatch;
+        let effectiveTimeout = timeout;
+        if (batch) {
+            if (batch.deferredTimeout !== null) {
+                effectiveTimeout = Math.max(batch.deferredTimeout, timeout ?? DEFAULT_STABILITY_TIMEOUT);
+            }
+            batch.deferredTimeout = null;
+            batch.pageTransitioned = false;
+        }
+
+        await this.stability.waitForStability(effectiveTimeout);
     }
 
     // async applyTransformations() {

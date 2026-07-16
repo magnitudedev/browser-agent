@@ -15,6 +15,7 @@ export interface AgentConnector {
     collectObservations?(): Promise<Observation[]>;
     // TODO: unify ^ prob return ObservableData from both viewState/collectObservations? or union/option of either
     getInstructions?(): Promise<void | string>;
+    runActionBatch?<T>(run: () => Promise<T>): Promise<T>;
 }
 
 //export { BrowserConnector, BrowserConnectorOptions } from './browserConnector';
