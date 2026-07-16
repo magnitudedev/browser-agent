@@ -101,6 +101,10 @@ export class BrowserConnector implements AgentConnector {
         this.logger.info("Stopped successfully.");
     }
 
+    runActionBatch<T>(run: () => Promise<T>): Promise<T> {
+        return this.harness.runActionBatch(run);
+    }
+
     getActionSpace(): ActionDefinition<any>[] {
         return [...webActions];
     }

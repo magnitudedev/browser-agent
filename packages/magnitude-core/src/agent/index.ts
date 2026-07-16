@@ -390,16 +390,27 @@ export class Agent {
             memory.recordThought(reasoning);
 
             // Execute partial recipe
-            for (const action of actions) {
-                await this._waitIfPaused();
-                if (this.doneActing) break;
-                await this.exec(action, memory);
+            const executeActions = async (): Promise<void> => {
+                for (const action of actions) {
+                    await this._waitIfPaused();
+                    if (this.doneActing) break;
+                    await this.exec(action, memory);
 
-                // const postActionScreenshot = await this.screenshot();
-                // const actionDescriptor: ActionDescriptor = { ...action, screenshot: postActionScreenshot.image } as ActionDescriptor;
-                // this.events.emit('action', actionDescriptor);
-                logger.info({ action }, `Action taken`);
+                    // const postActionScreenshot = await this.screenshot();
+                    // const actionDescriptor: ActionDescriptor = { ...action, screenshot: postActionScreenshot.image } as ActionDescriptor;
+                    // this.events.emit('action', actionDescriptor);
+                    logger.info({ action }, `Action taken`);
+                }
+            };
+
+            let executeBatch = executeActions;
+            for (const connector of [...this.connectors].reverse()) {
+                if (connector.runActionBatch) {
+                    const next = executeBatch;
+                    executeBatch = () => connector.runActionBatch!(next);
+                }
             }
+            await executeBatch();
 
             // If macro expects these actions should complete the step, break
             // if (finished) {
